@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 import requests
+import re
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.action_chains import ActionChains
@@ -11,7 +12,7 @@ import time
 import csv
 
 CSV = 'cases.csv'
-url = "https://notariat.ru/ru-ru/"
+url = "https://notariat.ru/ru-ru/help/probate-cases/"
 driver = webdriver.Chrome(executable_path="C:\\Users\\Андрей\\PycharmProjects\\Parser_site\\chromedriver\\chromedriver.exe")
 
 class NalogParser(object):
@@ -28,21 +29,7 @@ class NalogParser(object):
         try:
             driver.get(url=url)
             time.sleep(2)
-            window_before = driver.window_handles[0]
-            # driver.find_element_by_link_text("Реестр наследственных дел").click()
-            # elem = driver.find_elements_by_xpath("//span[@class='public-records__item-text']//*[contains(text(), 'Реестр наследственных дел')]")
-            # elem = driver.find_element_by_css_selector('span.public-records__item-text')
-            # elem = driver.find_element_by_css_selector('div.public-records__item>a[href="//notariat.ru/ru-ru/help/probate-cases/"]')
-            # elem = driver.find_element_by_xpath("//a[@class=public-records__item-text']ontent'][@href='//notariat.ru/ru-ru/help/probate-cases/']")
-            # elem = driver.find_element_by_xpath('//a[span="Поиск по сайту"]')
 
-            #Нахождение баннера с Реестром наследственных дел
-            elem = driver.find_element_by_xpath('/html/body/div/main/div[3]/div[2]')
-            ActionChains(driver).move_to_element(elem).click(elem).perform()
-            time.sleep(2)
-            window_after = driver.window_handles[2]
-            driver.switch_to.window(window_after)
-            time.sleep(2)
             # Ввод ФИО человека
             name = driver.find_element_by_name('name')
             ActionChains(driver).move_to_element(name).send_keys(fio).perform()
@@ -104,23 +91,24 @@ class NalogParser(object):
 
     def get_content(self, HTMLPage):
         soup = BeautifulSoup(HTMLPage, features='html.parser')
-
         all_cases = []
         pages = int(soup.find('h5', class_='probate-cases__result-header').find('b').get_text()) // 12 + 1
         for page in range(1, pages + 1):
             page = str(page)
-            probate_cases = soup.find_all('ol', class_='probate-cases__result-list')
             if page != '1':
                 number_page = driver.find_element_by_css_selector(f'li[data-page="{page}"]')
                 ActionChains(driver).move_to_element(number_page).click(number_page).perform()
                 time.sleep(4)
+                html_page = driver.page_source
+                soup = BeautifulSoup(html_page, features='html.parser')
+            probate_cases = soup.find_all('ol', class_='probate-cases__result-list')
             for cases in probate_cases:
                 for case in cases:
                     all_cases.append(
                         {
                             'title': case.find('h4').get_text(),
                             'date_death': case.find_all('p')[0].get_text(),
-                            #'number_case': case.find_all('p')[1][0].get_text(),
+                            'number_case': re.findall(r'(\d*\/\d\d*)', case.find_all('p')[1].get_text())[0],
                             'name_notary': case.find('a').get_text(),
                             'link_product': case.find('a').get('href')
                         }
@@ -132,12 +120,13 @@ class NalogParser(object):
             writer = csv.writer(file, delimiter=';')
             writer.writerow(['ФИО человека', 'Дата смерти', 'Номер дела', 'Нотариус', 'Ссылка на нотариус'])
             for item in items:
-                writer.writerow([item['title'], item['date_death'], item['name_notary'], item['link_product']])
+                writer.writerow(
+                    [item['title'], item['date_death'], item['number_case'], item['name_notary'], item['link_product']])
 
 
 if __name__ == '__main__':
     fio = 'Иванов Сергей Александрович'
     b_date = ['01', '03', '1960']
     d_date = ['01', '03', '2015']
-    Parser =NalogParser()
+    Parser = NalogParser()
     Parser.parse_probate_cases_page(fio, b_date, d_date)
