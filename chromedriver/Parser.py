@@ -1,3 +1,5 @@
+from bs4 import BeautifulSoup
+import requests
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.action_chains import ActionChains
@@ -6,14 +8,16 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 import time
+import csv
 
+CSV = 'cases.csv'
 url = "https://notariat.ru/ru-ru/"
 driver = webdriver.Chrome(executable_path="C:\\Users\\Андрей\\PycharmProjects\\Parser_site\\chromedriver\\chromedriver.exe")
 
 class NalogParser(object):
 
     def parse_probate_cases_page(self, fio: str, b_date: list, d_date: list):
-        """Выводит название товара и цены
+        """Вводит входные данные
             Arg:
                 fio:
                 b_date:
@@ -78,27 +82,62 @@ class NalogParser(object):
             b_year = driver.find_element_by_name('b-year')
             ActionChains(driver).move_to_element(b_year).click(b_year).perform()
             # ActionChains(driver).move_to_element(name).send_keys(b_date[2]).perform()
-            time.sleep(4)
+            # time.sleep(4)
             # Ввод года смерти человека
             d_year = driver.find_element_by_name('d-year')
             ActionChains(driver).move_to_element(d_year).click(d_year).perform()
-            # ActionChains(driver).move_to_element(name).send_keys(d_date[2]).perform()
+            ActionChains(driver).move_to_element(name).send_keys(d_date[2]).perform()
             # Нажатие кнопки поиск дел
             search = driver.find_element_by_class_name('button__text')
             ActionChains(driver).move_to_element(search).click(search).perform()
             time.sleep(4)
-            # name.send_keys("Иванов Иван Иванович")
-            # time.sleep(2)
+            HTMLPage = driver.page_source
+            items = self.get_content(HTMLPage)
+            self.save_info(items, CSV)
         except Exception as ex:
             print(ex)
+            print('NO')
         finally:
             driver.close()
             driver.quit()
 
 
+    def get_content(self, HTMLPage):
+        soup = BeautifulSoup(HTMLPage, features='html.parser')
+
+        all_cases = []
+        pages = int(soup.find('h5', class_='probate-cases__result-header').find('b').get_text()) // 12 + 1
+        for page in range(1, pages + 1):
+            page = str(page)
+            probate_cases = soup.find_all('ol', class_='probate-cases__result-list')
+            if page != '1':
+                number_page = driver.find_element_by_css_selector(f'li[data-page="{page}"]')
+                ActionChains(driver).move_to_element(number_page).click(number_page).perform()
+                time.sleep(4)
+            for cases in probate_cases:
+                for case in cases:
+                    all_cases.append(
+                        {
+                            'title': case.find('h4').get_text(),
+                            'date_death': case.find_all('p')[0].get_text(),
+                            #'number_case': case.find_all('p')[1][0].get_text(),
+                            'name_notary': case.find('a').get_text(),
+                            'link_product': case.find('a').get('href')
+                        }
+                    )
+        return all_cases
+
+    def save_info(self, items, path):
+        with open(path, 'w', newline='') as file:
+            writer = csv.writer(file, delimiter=';')
+            writer.writerow(['ФИО человека', 'Дата смерти', 'Номер дела', 'Нотариус', 'Ссылка на нотариус'])
+            for item in items:
+                writer.writerow([item['title'], item['date_death'], item['name_notary'], item['link_product']])
+
+
 if __name__ == '__main__':
-    fio = 'Иванов Иван Иванович'
+    fio = 'Иванов Сергей Александрович'
     b_date = ['01', '03', '1960']
-    d_date = ['01', '03', '2020']
+    d_date = ['01', '03', '2015']
     Parser =NalogParser()
     Parser.parse_probate_cases_page(fio, b_date, d_date)
