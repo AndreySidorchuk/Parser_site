@@ -29,51 +29,72 @@ class NalogParser(object):
         try:
             driver.get(url=url)
             time.sleep(2)
-
+            months = driver.find_elements_by_xpath('//span[contains(text(), "Месяц")]')
+            days = driver.find_elements_by_xpath('//span[contains(text(), "День")]')
             # Ввод ФИО человека
             name = driver.find_element_by_name('name')
             ActionChains(driver).move_to_element(name).send_keys(fio).perform()
-            time.sleep(4)
-            day = driver.find_element_by_xpath("//a[span='День']")
-            ActionChains(driver).move_to_element(day).click(day).perform()
-            time.sleep(3)
-            # Клик по вкладке месяц рождения
-            month = driver.find_element_by_xpath('//a[span="Месяц"]')
-            # ActionChains(driver).move_to_element(month).click(month).perform()
-            time.sleep(3)
-            # select = Select(WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'select.select[name="b-month"]'))))
-            # numbers_month = select.select_by_value("02")
-            # select = Select(EC.element_to_be_clickable((By.NAME, "")))
-            # numbers_month = driver.find_element_by_xpath("//input[@name='b-month']")
-            # numbers_month.send_keys("Февраль")
-            # driver.find_element_by_xpath('//select[@name="b-month"]/option[@value="01"]').click()
-            # months = Select(driver.find_element(By.NAME("b-month")))
-            # number_month = months.select_by_visible_text("Январь")
             time.sleep(2)
-            # select.select_by_value('01').click()
-            # numbers_month = Select(driver.find_element_by_name("b-month"))
-            # numbers_month.select_by_visible_text("Январь").click()
-            # ActionChains(driver).move_to_element(numbers_month).click(numbers_month).perform()
+
+            # Выбор дня рождения
+            b_day = days[0]
+            driver.execute_script("arguments[0].scrollIntoView();", b_day)
+            time.sleep(2)
+            ActionChains(driver).move_to_element(b_day).click(b_day).perform()
+            time.sleep(2)
+            for day in range(1, int(b_date[0]) + 1):
+                if day != 1:
+                    ActionChains(driver).move_to_element(b_day).send_keys(Keys.ARROW_DOWN).perform()
+                    time.sleep(1)
+            ActionChains(driver).move_to_element(b_day).send_keys(Keys.RETURN).perform()
             time.sleep(3)
-            # d_month = driver.find_element_by_xpath('/html/body/div[1]/main/div[1]/div[2]/section/section/div[1]/form/div[1]/div[1]/div[3]/div/label[2]/div/a/span/font/font')
-            # ActionChains(driver).move_to_element(d_month).click(d_month).perform()
-            # time.sleep(3)
-            # number_d_month = driver.find_element_by_xpath('/html/body/div[1]/main/div[1]/div[2]/section/section/div[1]/form/div[1]/div[1]/div[3]/div/label[2]/select/option[2]')
-            # ActionChains(driver).move_to_element(number_d_month).click(number_d_month).perform()
-            # time.sleep(3)
-            # number_day = driver.find_element_by_xpath('//a[@span="01")]')
-            # ActionChains(driver).move_to_element(number_day).click(number_day).perform()
-            # time.sleep(4)
+
+            #Выбор месяца рождения
+            b_month = months[0]
+            ActionChains(driver).move_to_element(b_month).click(b_month).perform()
+            time.sleep(3)
+            for month in range(1, int(b_date[1]) + 1):
+                if month != 1:
+                    ActionChains(driver).move_to_element(b_month).send_keys(Keys.ARROW_DOWN).perform()
+                    time.sleep(1)
+            ActionChains(driver).move_to_element(b_month).send_keys(Keys.RETURN).perform()
+            time.sleep(3)
 
             # Ввод года рождения человека
             b_year = driver.find_element_by_name('b-year')
             ActionChains(driver).move_to_element(b_year).click(b_year).perform()
-            # ActionChains(driver).move_to_element(name).send_keys(b_date[2]).perform()
-            # time.sleep(4)
+            ActionChains(driver).move_to_element(name).send_keys(b_date[2]).perform()
+            time.sleep(3)
+
+            # Выбор дня смерти
+            d_day = days[1]
+            driver.execute_script("arguments[0].scrollIntoView();", d_day)
+            time.sleep(2)
+            ActionChains(driver).move_to_element(d_day).click(d_day).perform()
+            time.sleep(2)
+            for day in range(1, int(d_date[0]) + 1):
+                if day != 1:
+                    ActionChains(driver).move_to_element(d_day).send_keys(Keys.ARROW_DOWN).perform()
+                    time.sleep(1)
+            ActionChains(driver).move_to_element(d_day).send_keys(Keys.RETURN).perform()
+            time.sleep(3)
+
+            # Выбор месяца смерти
+            d_months = months[1]
+            ActionChains(driver).move_to_element(d_months).click(d_months).perform()
+            time.sleep(3)
+            for month in range(1, int(d_date[1]) + 1):
+                if month != 1:
+                    ActionChains(driver).move_to_element(d_months).send_keys(Keys.ARROW_DOWN).perform()
+                    time.sleep(1)
+            ActionChains(driver).move_to_element(d_months).send_keys(Keys.RETURN).perform()
+            time.sleep(3)
+
             # Ввод года смерти человека
             d_year = driver.find_element_by_name('d-year')
             ActionChains(driver).move_to_element(d_year).click(d_year).perform()
             ActionChains(driver).move_to_element(name).send_keys(d_date[2]).perform()
+
             # Нажатие кнопки поиск дел
             search = driver.find_element_by_class_name('button__text')
             ActionChains(driver).move_to_element(search).click(search).perform()
@@ -106,7 +127,7 @@ class NalogParser(object):
                 for case in cases:
                     all_cases.append(
                         {
-                            'title': case.find('h4').get_text(),
+                            'title': case.find('h4').get_text().capitalize(),
                             'date_death': case.find_all('p')[0].get_text(),
                             'number_case': re.findall(r'(\d*\/\d\d*)', case.find_all('p')[1].get_text())[0],
                             'name_notary': case.find('a').get_text(),
@@ -126,7 +147,7 @@ class NalogParser(object):
 
 if __name__ == '__main__':
     fio = 'Иванов Сергей Александрович'
-    b_date = ['01', '03', '1960']
-    d_date = ['01', '03', '2015']
+    b_date = ['08', '03', '1945']
+    d_date = ['01', '07', '2014']
     Parser = NalogParser()
     Parser.parse_probate_cases_page(fio, b_date, d_date)
