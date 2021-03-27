@@ -1,7 +1,10 @@
 from bs4 import BeautifulSoup
 import re
+import sys
 from selenium import webdriver
+from selenium.webdriver.support.ui import WebDriverWait
 from chromedriver.locators import NalogLocators
+from loguru import logger
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 import time
@@ -11,78 +14,75 @@ CSV = 'cases.csv'
 URL = "https://notariat.ru/ru-ru/help/probate-cases/"
 driver = webdriver.Chrome(executable_path="C:\\Users\\Андрей\\PycharmProjects\\Parser_site\\chromedriver\\chromedriver.exe")
 
+
+logger.add("debug.log", format="{time} {level} {message}", level="DEBUG")
+logger.info("Info")
+logger.error("Error")
+logger.debug("Debug")
+
+@logger.catch
 def parse_probate_cases_page(fio: str, b_date: list, d_date: list):
     """Вводит входные данные
         Arg:
-            fio:
-            b_date:
-            d_date:
+            fio: ФИО человека
+            b_date: дата рождения
+            d_date: дата смерти
 
-        Return:
+        Return: информация о найденных делах
     """
     try:
         driver.get(URL)
-        time.sleep(2)
+        WebDriverWait(driver, 1)
         months = driver.find_elements(*NalogLocators.months)
         days = driver.find_elements(*NalogLocators.days)
+
         # Ввод ФИО человека
         name = driver.find_element(*NalogLocators.name)
         ActionChains(driver).move_to_element(name).send_keys(fio).perform()
-        time.sleep(2)
 
         # Выбор дня рождения
         b_day = days[0]
         driver.execute_script("arguments[0].scrollIntoView();", b_day)
-        time.sleep(2)
         ActionChains(driver).move_to_element(b_day).click(b_day).perform()
-        time.sleep(2)
+        WebDriverWait(driver, 1)
         for day in range(1, int(b_date[0]) + 1):
             if day != 1:
                 ActionChains(driver).move_to_element(b_day).send_keys(Keys.ARROW_DOWN).perform()
-                time.sleep(1)
         ActionChains(driver).move_to_element(b_day).send_keys(Keys.RETURN).perform()
-        time.sleep(3)
+        WebDriverWait(driver, 1)
 
         #Выбор месяца рождения
         b_month = months[0]
         ActionChains(driver).move_to_element(b_month).click(b_month).perform()
-        time.sleep(3)
+        WebDriverWait(driver, 1)
         for month in range(1, int(b_date[1]) + 1):
             if month != 1:
                 ActionChains(driver).move_to_element(b_month).send_keys(Keys.ARROW_DOWN).perform()
-                time.sleep(1)
         ActionChains(driver).move_to_element(b_month).send_keys(Keys.RETURN).perform()
-        time.sleep(3)
+
 
         # Ввод года рождения человека
         b_year = driver.find_element(*NalogLocators.brth_day)
         ActionChains(driver).move_to_element(b_year).click(b_year).perform()
         ActionChains(driver).move_to_element(name).send_keys(b_date[2]).perform()
-        time.sleep(3)
 
         # Выбор дня смерти
         d_day = days[1]
         driver.execute_script("arguments[0].scrollIntoView();", d_day)
-        time.sleep(2)
         ActionChains(driver).move_to_element(d_day).click(d_day).perform()
-        time.sleep(2)
         for day in range(1, int(d_date[0]) + 1):
             if day != 1:
                 ActionChains(driver).move_to_element(d_day).send_keys(Keys.ARROW_DOWN).perform()
-                time.sleep(1)
         ActionChains(driver).move_to_element(d_day).send_keys(Keys.RETURN).perform()
-        time.sleep(3)
 
         # Выбор месяца смерти
         d_months = months[1]
         ActionChains(driver).move_to_element(d_months).click(d_months).perform()
-        time.sleep(3)
+        WebDriverWait(driver, 2)
         for month in range(1, int(d_date[1]) + 1):
             if month != 1:
                 ActionChains(driver).move_to_element(d_months).send_keys(Keys.ARROW_DOWN).perform()
-                time.sleep(1)
         ActionChains(driver).move_to_element(d_months).send_keys(Keys.RETURN).perform()
-        time.sleep(3)
 
         # Ввод года смерти человека
         d_year = driver.find_element(*NalogLocators.death_day)
@@ -92,16 +92,15 @@ def parse_probate_cases_page(fio: str, b_date: list, d_date: list):
         # Нажатие кнопки поиск дел
         search = driver.find_element(*NalogLocators.search_button)
         ActionChains(driver).move_to_element(search).click(search).perform()
-        time.sleep(4)
+        WebDriverWait(driver, 2)
         HTMLPage = driver.page_source
         items = get_content(HTMLPage)
         save_info(items, CSV)
-    except Exception as ex:
-        print(ex)
     finally:
         driver.close()
         driver.quit()
 
+@logger.catch
 def get_content(HTMLPage):
     soup = BeautifulSoup(HTMLPage, features='html.parser')
     all_cases = []
@@ -128,6 +127,7 @@ def get_content(HTMLPage):
                 )
     return all_cases
 
+@logger.catch
 def save_info( items, path):
     with open(path, 'w', newline='') as file:
         writer = csv.writer(file, delimiter=';')
