@@ -1,11 +1,5 @@
-from selenium import webdriver
-
 from selenium.webdriver.common.by import By
 
-
-CSV = 'cases.csv'
-url = "https://notariat.ru/ru-ru/help/probate-cases/"
-driver = webdriver.Chrome(executable_path="C:\\Users\\Андрей\\PycharmProjects\\Parser_site\\chromedriver\\chromedriver.exe")
 
 class NalogLocators(object):
 
